@@ -173,7 +173,7 @@ public class TSAClientBouncyCastle implements TSAClient {
      * @return the digest algorithm name
      */
     public MessageDigest getMessageDigest() throws GeneralSecurityException {
-        return new BouncyCastleDigest().getMessageDigest(digestAlgorithm);
+        return MessageDigest.getInstance(digestAlgorithm, "BC");
     }
     
     /**
