@@ -256,9 +256,13 @@ public class PdfPKCS7 {
 /*
 			This should work, but that's not always the case because of a bug in BouncyCastle:
 */	
-            X509CertParser cr = new X509CertParser();
-            cr.engineInit(new ByteArrayInputStream(contentsKey));
-            certs = cr.engineReadAll();
+            CertificateFactory certificateFactory;
+            if (null != provider) {
+                certificateFactory = CertificateFactory.getInstance("X.509", provider);
+            } else {
+                certificateFactory = CertificateFactory.getInstance("X.509");
+            }
+            certs = (Collection<Certificate>) certificateFactory.generateCertificates(new ByteArrayInputStream(contentsKey));
 /*    
             The following workaround was provided by Alfonso Massa, but it doesn't always work either.
 
@@ -359,7 +363,8 @@ public class PdfPKCS7 {
                         ESSCertID[] cerv2m = sv2.getCerts();
                         ESSCertID cerv2 = cerv2m[0];
                         byte[] enc2 = signCert.getEncoded();
-                        MessageDigest m2 = new BouncyCastleDigest().getMessageDigest("SHA-1");
+                        MessageDigest m2 = null == provider ? MessageDigest.getInstance("SHA-1")
+                                                            : MessageDigest.getInstance("SHA-1", provider);
                         byte[] signCertHash = m2.digest(enc2);
                         byte[] hs2 = cerv2.getCertHash();
                         if (!Arrays.equals(signCertHash, hs2))
@@ -374,7 +379,8 @@ public class PdfPKCS7 {
                         ESSCertIDv2 cerv2 = cerv2m[0];
                         AlgorithmIdentifier ai2 = cerv2.getHashAlgorithm();
                         byte[] enc2 = signCert.getEncoded();
-                        MessageDigest m2 = new BouncyCastleDigest().getMessageDigest(DigestAlgorithms.getDigest(ai2.getAlgorithm().getId()));
+                        MessageDigest m2 = provider == null ? MessageDigest.getInstance(DigestAlgorithms.getDigest(ai2.getAlgorithm().getId()))
+                                                            : MessageDigest.getInstance(DigestAlgorithms.getDigest(ai2.getAlgorithm().getId()), provider);
                         byte[] signCertHash = m2.digest(enc2);
                         byte[] hs2 = cerv2.getCertHash();
                         if (!Arrays.equals(signCertHash, hs2))
@@ -1107,7 +1113,9 @@ public class PdfPKCS7 {
         TimeStampTokenInfo info = timeStampToken.getTimeStampInfo();
         MessageImprint imprint = info.toASN1Structure().getMessageImprint();
         String algOID = info.getMessageImprintAlgOID().getId();
-        byte[] md = new BouncyCastleDigest().getMessageDigest(DigestAlgorithms.getDigest(algOID)).digest(digest);
+        MessageDigest mdf = null == provider ? MessageDigest.getInstance(DigestAlgorithms.getDigest(algOID))
+                                             : MessageDigest.getInstance(DigestAlgorithms.getDigest(algOID), provider);
+        byte[] md = mdf.digest(digest);
         byte[] imphashed = imprint.getHashedMessage();
         boolean res = Arrays.equals(md, imphashed);
         return res;
